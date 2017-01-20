@@ -159,15 +159,12 @@ func Code(err error) string {
 //      Temporary() bool
 //  }
 func IsTemporary(err error) bool {
-	for err != nil {
-		if temporary, ok := err.(temporaryer); ok {
-			return temporary.Temporary()
-		}
-		if errCauser, ok := err.(causer); ok {
-			err = errCauser.Cause()
-		} else {
-			err = nil
-		}
+	err = errors.Cause(err)
+	for err == nil {
+		return false
+	}
+	if temporary, ok := err.(temporaryer); ok {
+		return temporary.Temporary()
 	}
 	return false
 }
