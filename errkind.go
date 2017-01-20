@@ -191,6 +191,10 @@ func (s publicStatusError) Public() bool {
 	return true
 }
 
+func (s publicStatusError) With(keyvals ...interface{}) errors.Error {
+	return errors.Wrap(s).With(keyvals...)
+}
+
 // publicStatusCodeError implements error, statusCoder, coder and publicer interfaces.
 type publicStatusCodeError struct {
 	message string
@@ -218,6 +222,10 @@ func (s publicStatusCodeError) Public() bool {
 	return true
 }
 
+func (s publicStatusCodeError) With(keyvals ...interface{}) errors.Error {
+	return errors.Wrap(s).With(keyvals...)
+}
+
 // makeMessage returns a string message based on a default message,
 // and zero or more strings in the msg slice. If there is one or more
 // non-blank messages in the msg slice, then they are concatenated and
@@ -243,11 +251,16 @@ func makeMessage(defaultMsg string, msgs []string) string {
 // Public returns an error with the message and status.
 // The message should not contain any implementation details as
 // it may be displayed to a requesting client.
+//
+// Note that if you attach any key/value pairs to the public
+// error using the With method, then that will return a new error that
+// is not public, as implementation details may be present in the key/value pairs.
+// The cause of the new error, however, will still be public.
 func Public(message string, status int) errors.Error {
-	return errors.Wrap(publicStatusError{
+	return publicStatusError{
 		message: message,
 		status:  status,
-	})
+	}
 }
 
 // PublicWithCode returns an error with the message, status and code.
@@ -256,17 +269,22 @@ func Public(message string, status int) errors.Error {
 //
 // The message and code should not contain any implementation details as
 // it may be displayed to a requesting client.
+//
+// Note that if you attach any key/value pairs to the public
+// error using the With method, then that will return a new error that
+// is not public, as implementation details may be present in the key/value pairs.
+// The cause of the new error, however, will still be public.
 func PublicWithCode(message string, status int, code string) errors.Error {
 	code = strings.TrimSpace(code)
 	if code == "" {
 		// no code supplied
 		return Public(message, status)
 	}
-	return errors.Wrap(publicStatusCodeError{
+	return publicStatusCodeError{
 		message: message,
 		status:  status,
 		code:    code,
-	})
+	}
 }
 
 // IsPublic returns true for errors that indicate
@@ -278,11 +296,17 @@ func PublicWithCode(message string, status int, code string) errors.Error {
 //  type publicer interface {
 //      Public() bool
 //  }
+//
+// It usually makes sense to obtain the cause of an error first
+// before testing to see if it is public. Any public error that
+// is wrapped using errors.Wrap, or errors.With will return a
+// new error that is no longer public.
+//  // get the cause of the error
+//  err = errors.Cause(err)
+//  if errkind.IsPublic(err) {
+//      // ... can provide err.Error() to the client
+//  }
 func IsPublic(err error) bool {
-	err = errors.Cause(err)
-	if err == nil {
-		return false
-	}
 	if public, ok := err.(publicer); ok {
 		return public.Public()
 	}

@@ -206,7 +206,7 @@ func TestPublic(t *testing.T) {
 		},
 		{
 			err:        errors.Wrap(Public("public", 401), "wrapped").With("a", "b"),
-			want:       true,
+			want:       false,
 			wantError:  "wrapped a=b: public",
 			wantStatus: 401,
 		},
@@ -219,7 +219,7 @@ func TestPublic(t *testing.T) {
 		},
 		{
 			err:        errors.Wrap(PublicWithCode("public", 401, "YYY"), "wrapped").With("a", "b"),
-			want:       true,
+			want:       false,
 			wantError:  "wrapped a=b: public",
 			wantStatus: 401,
 			wantCode:   "YYY",
