@@ -187,11 +187,12 @@ func TestTemporary(t *testing.T) {
 
 func TestPublic(t *testing.T) {
 	tests := []struct {
-		err        error
-		want       bool
-		wantError  string
-		wantStatus int
-		wantCode   string
+		err         error
+		want        bool
+		wantError   string
+		wantMessage string
+		wantStatus  int
+		wantCode    string
 	}{
 		{
 			err:        nil,
@@ -211,18 +212,33 @@ func TestPublic(t *testing.T) {
 			wantStatus: 401,
 		},
 		{
-			err:        PublicWithCode("public", 400, "XXX"),
+			err:         PublicWithCode("public", 400, "XXX"),
+			want:        true,
+			wantError:   "public code=XXX",
+			wantMessage: "public",
+			wantStatus:  400,
+			wantCode:    "XXX",
+		},
+		{
+			err:        PublicWithCode("public", 400, ""),
 			want:       true,
 			wantError:  "public",
 			wantStatus: 400,
-			wantCode:   "XXX",
+			wantCode:   "",
 		},
 		{
-			err:        errors.Wrap(PublicWithCode("public", 401, "YYY"), "wrapped").With("a", "b"),
+			err:        errors.Wrap(PublicWithCode("public", 401, "YY YY"), "wrapped").With("a", "b"),
+			want:       false,
+			wantError:  "wrapped a=b: public code=\"YY YY\"",
+			wantStatus: 401,
+			wantCode:   "YY YY",
+		},
+		{
+			err:        errors.Wrap(PublicWithCode("public", 404, ""), "wrapped").With("a", "b"),
 			want:       false,
 			wantError:  "wrapped a=b: public",
-			wantStatus: 401,
-			wantCode:   "YYY",
+			wantStatus: 404,
+			wantCode:   "",
 		},
 		{
 			err:        errors.New("not public"),
@@ -251,7 +267,18 @@ func TestPublic(t *testing.T) {
 			if got, want := tt.err.Error(), tt.wantError; got != want {
 				t.Errorf("%d: want=%v, got=%v", i, want, got)
 			}
-
+		}
+		if tt.wantMessage != "" {
+			message, ok := tt.err.(interface {
+				Message() string
+			})
+			if !ok {
+				t.Errorf("%d: does not have Message() method", i)
+				continue
+			}
+			if got, want := message.Message(), tt.wantMessage; got != want {
+				t.Errorf("%d: want=%v, got =%v", i, want, got)
+			}
 		}
 	}
 }
