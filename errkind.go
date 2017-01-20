@@ -38,6 +38,7 @@
 package errkind
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -203,6 +204,13 @@ type publicStatusCodeError struct {
 }
 
 func (s publicStatusCodeError) Error() string {
+	if strings.ContainsAny(s.code, "\n\r\t \"'") {
+		return fmt.Sprintf("%s code=%q", s.message, s.code)
+	}
+	return fmt.Sprintf("%s code=%s", s.message, s.code)
+}
+
+func (s publicStatusCodeError) Message() string {
 	return s.message
 }
 
