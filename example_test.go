@@ -52,6 +52,6 @@ func ExampleNotImplemented() {
 	}
 
 	// Output:
-	// message for not implemented caller=example_test.go:44 (501)
-	// not implemented caller=example_test.go:50 (501)
+	// message for not implemented caller="example_test.go:44" (501)
+	// not implemented caller="example_test.go:50" (501)
 }
