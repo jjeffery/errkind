@@ -112,6 +112,13 @@ func StatusCode(err error) int {
 	return 0
 }
 
+// Status does the same thing as StatusCode.
+//
+// Deprecated: use StatusCode instead.
+func Status(err error) int {
+	return StatusCode(err)
+}
+
 // Code returns the string error code associated with err, or
 // a blank string if there is no code.
 func Code(err error) string {
