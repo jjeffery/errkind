@@ -6,13 +6,13 @@ func ExampleBadRequest() {
 	// supply a message
 	{
 		err := BadRequest("message for bad request")
-		fmt.Printf("%v (%d)\n", err, Status(err))
+		fmt.Printf("%v (%d)\n", err, StatusCode(err))
 	}
 
 	// don't supply a message
 	{
 		err := BadRequest()
-		fmt.Printf("%v (%d)\n", err, Status(err))
+		fmt.Printf("%v (%d)\n", err, StatusCode(err))
 	}
 
 	// Output:
@@ -24,13 +24,13 @@ func ExampleForbidden() {
 	// supply a message
 	{
 		err := Forbidden("message for forbidden")
-		fmt.Printf("%v (%d)\n", err, Status(err))
+		fmt.Printf("%v (%d)\n", err, StatusCode(err))
 	}
 
 	// don't supply a message
 	{
 		err := Forbidden()
-		fmt.Printf("%v (%d)\n", err, Status(err))
+		fmt.Printf("%v (%d)\n", err, StatusCode(err))
 	}
 
 	// Output:
@@ -42,13 +42,13 @@ func ExampleNotImplemented() {
 	// supply a message
 	{
 		err := NotImplemented("message for not implemented")
-		fmt.Printf("%v (%d)\n", err, Status(err))
+		fmt.Printf("%v (%d)\n", err, StatusCode(err))
 	}
 
 	// don't supply a message
 	{
 		err := NotImplemented()
-		fmt.Printf("%v (%d)\n", err, Status(err))
+		fmt.Printf("%v (%d)\n", err, StatusCode(err))
 	}
 
 	// Output:

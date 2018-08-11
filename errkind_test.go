@@ -66,7 +66,7 @@ func TestCode(t *testing.T) {
 	}
 }
 
-func TestStatus(t *testing.T) {
+func TestStatusCode(t *testing.T) {
 	tests := []struct {
 		err        error
 		statuses   []int
@@ -116,6 +116,30 @@ func TestStatus(t *testing.T) {
 			wantStatus: 402,
 		},
 		{
+			err:        BadRequest(),
+			statuses:   []int{400},
+			want:       true,
+			wantStatus: 400,
+		},
+		{
+			err:        Unauthorized(),
+			statuses:   []int{401},
+			want:       true,
+			wantStatus: 401,
+		},
+		{
+			err:        Forbidden(),
+			statuses:   []int{403},
+			want:       true,
+			wantStatus: 403,
+		},
+		{
+			err:        NotFound(),
+			statuses:   []int{404},
+			want:       true,
+			wantStatus: 404,
+		},
+		{
 			err:        errors.New("no status"),
 			statuses:   []int{400},
 			want:       false,
@@ -123,10 +147,10 @@ func TestStatus(t *testing.T) {
 		},
 	}
 	for i, tt := range tests {
-		if got, want := HasStatus(tt.err, tt.statuses...), tt.want; want != got {
+		if got, want := HasStatusCode(tt.err, tt.statuses...), tt.want; want != got {
 			t.Errorf("%d: want=%v, got=%v", i, want, got)
 		}
-		if got, want := Status(tt.err), tt.wantStatus; want != got {
+		if got, want := StatusCode(tt.err), tt.wantStatus; want != got {
 			t.Errorf("%d: want=%v, got=%v", i, want, got)
 		}
 	}
@@ -138,7 +162,7 @@ func (err testingStatusError) Error() string {
 	return "testing status error"
 }
 
-func (err testingStatusError) Status() int {
+func (err testingStatusError) StatusCode() int {
 	return int(err)
 }
 
@@ -257,7 +281,7 @@ func TestPublic(t *testing.T) {
 		if got, want := IsPublic(tt.err), tt.want; got != want {
 			t.Errorf("%d: want=%v, got=%v", i, want, got)
 		}
-		if got, want := Status(tt.err), tt.wantStatus; got != want {
+		if got, want := StatusCode(tt.err), tt.wantStatus; got != want {
 			t.Errorf("%d: want=%v, got=%v", i, want, got)
 		}
 		if got, want := Code(tt.err), tt.wantCode; got != want {

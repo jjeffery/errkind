@@ -10,7 +10,7 @@
 //      Temporary() bool
 //  }
 //
-// Some packages return errors which implement the ``coder''
+// Some packages return errors which implement the `coder`
 // interface, which allows the error to report an application-specific
 // error condition.
 //  type coder interface {
@@ -20,20 +20,16 @@
 // convention.
 //
 // In addition some third party packages (including the AWS SDK) follow the
-// convention of reporting HTTP status values using the ``statusCoder'' interface.
+// convention of reporting HTTP status values using the `statusCoder` interface.
 //  type statusCoder interface {
 //      StatusCode() int
 //  }
-// An alternative interface provides the same meaning:
-//  type statuser interface {
-//      Status() int
-//  }
 //
-// The publicer interface identifies an error as being suitable for displaying
+// The publicMessager interface identifies an error as being suitable for displaying
 // to a requesting client. The error message does not contain any implementation
 // details that could leak sensitive information.
-//  type publicer interface {
-//      Public() bool
+//  type publicMessager interface {
+//      PublicMessage()
 //  }
 package errkind
 
@@ -69,15 +65,10 @@ type statusCoder interface {
 	StatusCode() int
 }
 
-// statuser is an alternative interface implemented by errors that return an integer status code.
-type statuser interface {
-	Status() int
-}
-
-// publicer is an interface implemented by errors whose contents are suitable
+// publicMessager is an interface implemented by errors whose contents are suitable
 // for returning to requesting clients. Their message does not include implementation details.
-type publicer interface {
-	Public() bool
+type publicMessager interface {
+	PublicMessage()
 }
 
 // HasCode determines whether the error has any of the codes associated with it.
@@ -97,43 +88,26 @@ func HasCode(err error, codes ...string) bool {
 	return false
 }
 
-// HasStatus determines whether the error has any of the statuses associated with it.
-func HasStatus(err error, statuses ...int) bool {
-	err = errors.Cause(err)
-	if err == nil {
-		return false
-	}
-	if errStatusCoder, ok := err.(statusCoder); ok {
-		errStatus := errStatusCoder.StatusCode()
-		for _, status := range statuses {
-			if errStatus == status {
-				return true
-			}
-		}
-	}
-	if errStatuser, ok := err.(statuser); ok {
-		errStatus := errStatuser.Status()
-		for _, status := range statuses {
-			if errStatus == status {
-				return true
-			}
+// HasStatusCode determines whether the error has any of the statuses associated with it.
+func HasStatusCode(err error, statusCodes ...int) bool {
+	statusCode := StatusCode(err)
+	for _, sc := range statusCodes {
+		if statusCode == sc {
+			return true
 		}
 	}
 	return false
 }
 
-// Status returns the status code associated with err, or
+// StatusCode returns the status code associated with err, or
 // zero if there is no status.
-func Status(err error) int {
+func StatusCode(err error) int {
 	err = errors.Cause(err)
 	if err == nil {
 		return 0
 	}
 	if errStatusCoder, ok := err.(statusCoder); ok {
 		return errStatusCoder.StatusCode()
-	}
-	if errStatuser, ok := err.(statuser); ok {
-		return errStatuser.Status()
 	}
 	return 0
 }
@@ -170,31 +144,30 @@ func IsTemporary(err error) bool {
 	return false
 }
 
-// publicStatusError implements error, statusCoder and publicer interfaces.
-type publicStatusError struct {
+// statusError implements error, statusCoder and publicer interfaces.
+type statusError struct {
 	message string
 	status  int
 }
 
-func (s publicStatusError) Error() string {
+func (s statusError) Error() string {
 	return s.message
 }
 
-func (s publicStatusError) StatusCode() int {
+func (s statusError) StatusCode() int {
 	return s.status
 }
 
-func (s publicStatusError) Status() int {
-	return s.status
-}
-
-func (s publicStatusError) Public() bool {
-	return true
-}
-
-func (s publicStatusError) With(keyvals ...interface{}) errors.Error {
+func (s statusError) With(keyvals ...interface{}) errors.Error {
 	return errors.Wrap(s).With(keyvals...)
 }
+
+// publicStatusError implements error, statusCoder and publicer interfaces.
+type publicStatusError struct {
+	statusError
+}
+
+func (s publicStatusError) PublicMessage() {}
 
 // publicStatusCodeError implements error, statusCoder, coder and publicer interfaces.
 type publicStatusCodeError struct {
@@ -218,17 +191,11 @@ func (s publicStatusCodeError) StatusCode() int {
 	return s.status
 }
 
-func (s publicStatusCodeError) Status() int {
-	return s.status
-}
-
 func (s publicStatusCodeError) Code() string {
 	return s.code
 }
 
-func (s publicStatusCodeError) Public() bool {
-	return true
-}
+func (s publicStatusCodeError) PublicMessage() {}
 
 func (s publicStatusCodeError) With(keyvals ...interface{}) errors.Error {
 	return errors.Wrap(s).With(keyvals...)
@@ -266,8 +233,10 @@ func makeMessage(defaultMsg string, msgs []string) string {
 // The cause of the new error, however, will still be public.
 func Public(message string, status int) errors.Error {
 	return publicStatusError{
-		message: message,
-		status:  status,
+		statusError{
+			message: message,
+			status:  status,
+		},
 	}
 }
 
@@ -315,33 +284,48 @@ func PublicWithCode(message string, status int, code string) errors.Error {
 //      // ... can provide err.Error() to the client
 //  }
 func IsPublic(err error) bool {
-	if public, ok := err.(publicer); ok {
-		return public.Public()
-	}
-	return false
+	_, ok := err.(publicMessager)
+	return ok
 }
 
 // BadRequest returns an client error that has a status of 400 (bad request).
-// The optional msg should not contain sensitive implementation details, as it
-// may be returned to the requesting client.
 func BadRequest(msg ...string) errors.Error {
-	return Public(makeMessage("bad request", msg), http.StatusBadRequest)
+	return statusError{
+		message: makeMessage("bad request", msg),
+		status:  http.StatusBadRequest,
+	}
+}
+
+// Unauthorized returns a client error that has a status of 401 (unauthorized)
+func Unauthorized(msg ...string) errors.Error {
+	return statusError{
+		message: makeMessage("unauthorized", msg),
+		status:  http.StatusUnauthorized,
+	}
 }
 
 // Forbidden returns an error that has a status of 403 (forbidden).
-// The optional msg should not contain sensitive implementation details, as it
-// may be returned to the requesting client.
 func Forbidden(msg ...string) errors.Error {
-	return Public(makeMessage("forbidden", msg), http.StatusForbidden)
+	return statusError{
+		message: makeMessage("forbidden", msg),
+		status:  http.StatusForbidden,
+	}
+}
+
+// NotFound returns an error that has a status of 404 (not found).
+func NotFound(msg ...string) errors.Error {
+	return statusError{
+		message: makeMessage("not found", msg),
+		status:  http.StatusNotFound,
+	}
 }
 
 // NotImplemented returns an error with a status of not implemented.
-// The optional msg should not contain sensitive implementation details, as it
-// may be returned to the requesting client.
 func NotImplemented(msg ...string) errors.Error {
-	return Public(makeMessage("not implemented", msg), http.StatusNotImplemented).With(
-		"caller", stack.Caller(1),
-	)
+	return statusError{
+		message: makeMessage("not implemented", msg),
+		status:  http.StatusNotImplemented,
+	}.With("caller", stack.Caller(1))
 }
 
 type temporaryError string
