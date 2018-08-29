@@ -165,18 +165,20 @@ func (s statusError) StatusCode() int {
 	return s.status
 }
 
+func (s statusError) PublicStatusCode() {}
+
 func (s statusError) With(keyvals ...interface{}) errors.Error {
 	return errors.Wrap(s).With(keyvals...)
 }
 
-// publicStatusError implements error, statusCoder and publicer interfaces.
+// publicStatusError implements error, statusCoder and publicMessager interfaces.
 type publicStatusError struct {
 	statusError
 }
 
 func (s publicStatusError) PublicMessage() {}
 
-// publicStatusCodeError implements error, statusCoder, coder and publicer interfaces.
+// publicStatusCodeError implements error, statusCoder, coder and publicMessager interfaces.
 type publicStatusCodeError struct {
 	message string
 	status  int
@@ -203,6 +205,10 @@ func (s publicStatusCodeError) Code() string {
 }
 
 func (s publicStatusCodeError) PublicMessage() {}
+
+func (s publicStatusCodeError) PublicStatusCode() {}
+
+func (s publicStatusCodeError) PublicCode() {}
 
 func (s publicStatusCodeError) With(keyvals ...interface{}) errors.Error {
 	return errors.Wrap(s).With(keyvals...)

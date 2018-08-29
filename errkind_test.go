@@ -63,15 +63,29 @@ func TestCode(t *testing.T) {
 		if got, want := Code(tt.err), tt.wantCode; want != got {
 			t.Errorf("%d: want=%v, got=%v", i, want, got)
 		}
+		if tt.want {
+			if e, ok := errors.Cause(tt.err).(interface{ PublicMessage() }); ok {
+				e.PublicMessage() // call it for coverage
+			} else {
+				t.Errorf("%d: want=public message, got=not", i)
+			}
+			if e, ok := errors.Cause(tt.err).(interface{ PublicCode() }); ok {
+				e.PublicCode() // call it for coverage
+			} else {
+				t.Errorf("%d: want=public code, got=not", i)
+			}
+		}
 	}
 }
 
 func TestStatusCode(t *testing.T) {
 	tests := []struct {
-		err        error
-		statuses   []int
-		want       bool
-		wantStatus int
+		err               error
+		statuses          []int
+		want              bool
+		wantStatus        int
+		wantPublicMessage bool
+		wantPublicStatus  bool
 	}{
 		{
 			err:        nil,
@@ -80,28 +94,36 @@ func TestStatusCode(t *testing.T) {
 			wantStatus: 0,
 		},
 		{
-			err:        Public("test error", 501),
-			statuses:   []int{400, 401, 402},
-			want:       false,
-			wantStatus: 501,
+			err:               Public("test error", 501),
+			statuses:          []int{400, 401, 402},
+			want:              false,
+			wantStatus:        501,
+			wantPublicStatus:  true,
+			wantPublicMessage: true,
 		},
 		{
-			err:        PublicWithCode("test error", 501, "CODE").With("a", "b"),
-			statuses:   []int{400, 401, 402},
-			want:       false,
-			wantStatus: 501,
+			err:               PublicWithCode("test error", 501, "CODE").With("a", "b"),
+			statuses:          []int{400, 401, 402},
+			want:              false,
+			wantStatus:        501,
+			wantPublicStatus:  true,
+			wantPublicMessage: true,
 		},
 		{
-			err:        Public("test error", 501),
-			statuses:   []int{500, 501},
-			want:       true,
-			wantStatus: 501,
+			err:               Public("test error", 501),
+			statuses:          []int{500, 501},
+			want:              true,
+			wantStatus:        501,
+			wantPublicStatus:  true,
+			wantPublicMessage: true,
 		},
 		{
-			err:        PublicWithCode("test error", 400, "CODE").With("a", "b"),
-			statuses:   []int{400},
-			want:       true,
-			wantStatus: 400,
+			err:               PublicWithCode("test error", 400, "CODE").With("a", "b"),
+			statuses:          []int{400},
+			want:              true,
+			wantStatus:        400,
+			wantPublicStatus:  true,
+			wantPublicMessage: true,
 		},
 		{
 			err:        testingStatusError(501),
@@ -116,28 +138,32 @@ func TestStatusCode(t *testing.T) {
 			wantStatus: 402,
 		},
 		{
-			err:        BadRequest(),
-			statuses:   []int{400},
-			want:       true,
-			wantStatus: 400,
+			err:              BadRequest(),
+			statuses:         []int{400},
+			want:             true,
+			wantStatus:       400,
+			wantPublicStatus: true,
 		},
 		{
-			err:        Unauthorized(),
-			statuses:   []int{401},
-			want:       true,
-			wantStatus: 401,
+			err:              Unauthorized(),
+			statuses:         []int{401},
+			want:             true,
+			wantStatus:       401,
+			wantPublicStatus: true,
 		},
 		{
-			err:        Forbidden(),
-			statuses:   []int{403},
-			want:       true,
-			wantStatus: 403,
+			err:              Forbidden(),
+			statuses:         []int{403},
+			want:             true,
+			wantStatus:       403,
+			wantPublicStatus: true,
 		},
 		{
-			err:        NotFound(),
-			statuses:   []int{404},
-			want:       true,
-			wantStatus: 404,
+			err:              NotFound(),
+			statuses:         []int{404},
+			want:             true,
+			wantStatus:       404,
+			wantPublicStatus: true,
 		},
 		{
 			err:        errors.New("no status"),
@@ -152,6 +178,20 @@ func TestStatusCode(t *testing.T) {
 		}
 		if got, want := StatusCode(tt.err), tt.wantStatus; want != got {
 			t.Errorf("%d: want=%v, got=%v", i, want, got)
+		}
+		if tt.wantPublicMessage {
+			if e, ok := errors.Cause(tt.err).(interface{ PublicMessage() }); ok {
+				e.PublicMessage() // call it for coverage
+			} else {
+				t.Errorf("%d: want=public message, got=not", i)
+			}
+		}
+		if tt.wantPublicStatus {
+			if e, ok := errors.Cause(tt.err).(interface{ PublicStatusCode() }); ok {
+				e.PublicStatusCode() // call it for coverage
+			} else {
+				t.Errorf("%d: want=public status code, got=not", i)
+			}
 		}
 	}
 }
