@@ -318,7 +318,7 @@ func TestPublic(t *testing.T) {
 		},
 	}
 	for i, tt := range tests {
-		if got, want := IsPublic(tt.err), tt.want; got != want {
+		if got, want := HasPublicMessage(tt.err), tt.want; got != want {
 			t.Errorf("%d: want=%v, got=%v", i, want, got)
 		}
 		if got, want := StatusCode(tt.err), tt.wantStatus; got != want {

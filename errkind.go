@@ -25,12 +25,19 @@
 //      StatusCode() int
 //  }
 //
-// The publicMessager interface identifies an error as being suitable for displaying
-// to a requesting client. The error message does not contain any implementation
-// details that could leak sensitive information.
+// The publicMessager interface identifies an error as having a message suitable
+// for displaying to a requesting client. The error message does not contain any
+// implementation details that could leak sensitive information.
 //  type publicMessager interface {
 //      PublicMessage()
 //  }
+//
+// The publicStatusCoder interface identifies an error has having a status code
+// suitable for returning to a requesting client.
+//  type publicStatusCoder interface {
+//      PublicStatusCode()
+//  }
+//
 package errkind
 
 import (
@@ -69,6 +76,18 @@ type statusCoder interface {
 // for returning to requesting clients. Their message does not include implementation details.
 type publicMessager interface {
 	PublicMessage()
+}
+
+// publicStatusCoder is an interface implemented by errors whose status code
+// is public and can be returned to requesting clients.
+type publicStatusCoder interface {
+	PublicStatusCode()
+}
+
+// publicCoder is an interface implemented by errors whose error code is public
+// and can be returned to requesting clients.
+type publicCoder interface {
+	PublicCode()
 }
 
 // HasCode determines whether the error has any of the codes associated with it.
@@ -277,14 +296,14 @@ func PublicWithCode(message string, status int, code string) errors.Error {
 	}
 }
 
-// IsPublic returns true for errors that indicate
-// that their content does not contain sensitive information
+// HasPublicMessage returns true for errors that indicate
+// that their message does not contain sensitive information
 // and can be displayed to external clients.
 //
-// An error is considered public if it implements
-// the following interface and its Public method returns true.
-//  type publicer interface {
-//      Public() bool
+// An error has a public message if it implements
+// the following interface.
+//  type publicMessager interface {
+//      PublicMessage()
 //  }
 //
 // It usually makes sense to obtain the cause of an error first
@@ -293,15 +312,38 @@ func PublicWithCode(message string, status int, code string) errors.Error {
 // new error that is no longer public.
 //  // get the cause of the error
 //  err = errors.Cause(err)
-//  if errkind.IsPublic(err) {
+//  if errkind.HasPublicMessage(err) {
 //      // ... can provide err.Error() to the client
 //  }
-func IsPublic(err error) bool {
+func HasPublicMessage(err error) bool {
 	_, ok := err.(publicMessager)
 	return ok
 }
 
+/*********************
+
+TODO(jpj): maybe include in the public api
+
+// HasPublicStatusCode returns true for errors that indicate
+// that their status code does not contain sensitive information
+// and can be displayed to external clients.
+//
+// An error has a public status code if it implements
+// the following interface.
+//  type publicStatusCoder interface {
+//      PublicStatusCode()
+//  }
+func HasPublicStatusCode(err error) bool {
+	_, ok := err.(publicStatusCoder)
+	return ok
+}
+
+***************************/
+
 // BadRequest returns an client error that has a status of 400 (bad request).
+//
+// The returned error has a PublicStatusCode() method, which indicates that the
+// status code is public and can be returned to a client.
 func BadRequest(msg ...string) errors.Error {
 	return statusError{
 		message: makeMessage("bad request", msg),
@@ -309,7 +351,10 @@ func BadRequest(msg ...string) errors.Error {
 	}
 }
 
-// Unauthorized returns a client error that has a status of 401 (unauthorized)
+// Unauthorized returns a client error that has a status of 401 (unauthorized).
+//
+// The returned error has a PublicStatusCode() method, which indicates that the
+// status code is public and can be returned to a client.
 func Unauthorized(msg ...string) errors.Error {
 	return statusError{
 		message: makeMessage("unauthorized", msg),
@@ -318,6 +363,9 @@ func Unauthorized(msg ...string) errors.Error {
 }
 
 // Forbidden returns an error that has a status of 403 (forbidden).
+//
+// The returned error has a PublicStatusCode() method, which indicates that the
+// status code is public and can be returned to a client.
 func Forbidden(msg ...string) errors.Error {
 	return statusError{
 		message: makeMessage("forbidden", msg),
@@ -326,6 +374,9 @@ func Forbidden(msg ...string) errors.Error {
 }
 
 // NotFound returns an error that has a status of 404 (not found).
+//
+// The returned error has a PublicStatusCode() method, which indicates that the
+// status code is public and can be returned to a client.
 func NotFound(msg ...string) errors.Error {
 	return statusError{
 		message: makeMessage("not found", msg),
@@ -333,7 +384,10 @@ func NotFound(msg ...string) errors.Error {
 	}
 }
 
-// NotImplemented returns an error with a status of not implemented.
+// NotImplemented returns an error with a status of 501 (not implemented).
+//
+// The returned error has a PublicStatusCode() method, which indicates that the
+// status code is public and can be returned to a client.
 func NotImplemented(msg ...string) errors.Error {
 	return statusError{
 		message: makeMessage("not implemented", msg),
